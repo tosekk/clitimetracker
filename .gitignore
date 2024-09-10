@@ -1,0 +1,6 @@
+clitimetracker
+
+# logs
+logs/
+logs/*.log
+*.log
