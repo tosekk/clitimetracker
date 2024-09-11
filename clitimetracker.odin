@@ -24,9 +24,9 @@ main :: proc() {
   }
 
   // Main logic
-  curr_timer: Timer
+  curr_timer := new_timer()
 
-  timer_main(&curr_timer)
+  timer_main(curr_timer)
 
   // Checking for leaks and bad frees!
   for _, leak in tracking_allocator.allocation_map {
