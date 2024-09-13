@@ -22,16 +22,6 @@ No args && timer !running -> start timer else pause timer.
 --time <-> -T                                       Shows current running timer's time and additional info.
 */
 
-Project :: struct {
-  title: string,
-  timers: []Timer,
-}
-
-Tag :: struct {
-  title: string,
-  timers: []Timer,
-}
-
 Timer :: struct {
   title: string,
   project: string,
@@ -53,12 +43,12 @@ new_timer :: proc() -> (timer: ^Timer) {
 }
 
 timer_main :: proc(curr_timer: ^Timer) {
-  handle_arguments(curr_timer)
+  handle_arguments(curr_timer, os.args)
 }
 
 @(private)
-handle_arguments :: proc(curr_timer: ^Timer) {
-  passed_arguments: []string = os.args
+handle_arguments :: proc(curr_timer: ^Timer, args: []string) {
+  passed_arguments: []string = args
 
   // Skip the running application from arguments list to only have app arguments in the list
   passed_arguments = passed_arguments[1:]
@@ -96,14 +86,19 @@ handle_arguments :: proc(curr_timer: ^Timer) {
           curr_timer.end_time = time.now()
         case "--stop", "-s":
           save_and_stop_timer(curr_timer)
-        case "--timer", "-ti":
-          get_timer(value)
+        case "--timer", "-T":
+          set_timer_title(curr_timer, value)
       }
     }
   }
 
   curr_timer.start_time = time.now()
   curr_timer.running = true
+
+  fmt.printf("\rTimer Title: %s\nProject Title: %s\t\tTag: %s\t\n",
+    curr_timer.title != "" ? curr_timer.title : "Not set", 
+    curr_timer.project != "" ? curr_timer.project : "Not set", 
+    curr_timer.tag != "" ? curr_timer.tag : "Not set")
 
   // Elapsed time is calculated in seconds
   elapsed_duration: time.Duration = 0
@@ -113,7 +108,7 @@ handle_arguments :: proc(curr_timer: ^Timer) {
     timer_buf: [time.MIN_HMS_LEN]u8
     deadline_buf: [time.MIN_HMS_LEN]u8
   
-    run_timer(&timer_time)
+    run_timer(curr_timer, &timer_time)
     elapsed_duration += 1e9
     
     elapsed_time: time.Time = time.time_add(curr_timer.start_time, elapsed_duration)
@@ -123,7 +118,7 @@ handle_arguments :: proc(curr_timer: ^Timer) {
     deadline_time_string: string = time.to_string_hms(deadline_time, deadline_buf[:])
 
     if elapsed_time_string == deadline_time_string {
-      fmt.printfln("/rTime has run out! You've reached the deadline!\t")
+      fmt.printfln("\rTime has run out! You've reached the deadline!\t")
       curr_timer.running = false
       break
     }
@@ -131,8 +126,14 @@ handle_arguments :: proc(curr_timer: ^Timer) {
 }
 
 @(private)
-run_timer :: proc(timer_time: ^time.Time) {
-  time.sleep(1e9)
+run_timer :: proc(timer: ^Timer, timer_time: ^time.Time) {
+  deadline_buf: [time.MIN_HMS_LEN]u8
+  deadline_string: string = time.duration_to_string_hms(timer.deadline, deadline_buf[:])
+  if deadline_string == "00:00:00" {
+    deadline_string = "Not set"
+  } else {
+    deadline_string = fmt.tprintf("in %s", deadline_string)
+  }
 
   time_buf: [time.MIN_HMS_LEN]u8
   timer_time^ = time.time_add(
@@ -140,17 +141,15 @@ run_timer :: proc(timer_time: ^time.Time) {
   )
   timer_time_string: string = time.time_to_string_hms(timer_time^, time_buf[:]) 
 
-  fmt.printf("\rTime: %s\t", timer_time_string)
-}
+  fmt.printf("\rTime: %s\t\tDeadline: %s\t\t", timer_time_string, deadline_string)
 
-@(private)
-get_timer :: proc(timer_title: string) {
-
+  time.sleep(1e9)
 }
 
 @(private)
 save_and_stop_timer :: proc(timer: ^Timer) {
-
+  timer.running = false
+  timer.end_time = time.now()
 }
 
 @(private)
@@ -170,6 +169,11 @@ set_tag :: proc(timer: ^Timer, tag_name: string) {
   timer.tag = tag_name
 }
 
+@(private)
+set_timer_title :: proc(timer: ^Timer, timer_title: string) {
+  timer.title = timer_title
+}
+
 // Reports
 @(private)
 show_report :: proc {
@@ -178,11 +182,17 @@ show_report :: proc {
 
 @(private)
 show_overall_report :: proc() {
+  // load_data(PATH) -> returns JSON with data
+  // show data from the path
 
+  fmt.printf("\rTimer Title: \tProject Title: \tTag: \nStart Time: \tEnd Time: \tDuration: \n")
 }
 
 @(private)
 show_report_by_project_or_tag :: proc(title: string, is_project: bool) {
+  // load_data(PATH) -> returns JSON with data
+  // pass read data to functions below.
+
   if is_project {
     show_report_by_project(title)
     return
@@ -193,10 +203,12 @@ show_report_by_project_or_tag :: proc(title: string, is_project: bool) {
 
 @(private)
 show_report_by_project :: proc(project_name: string) {
-
+  fmt.printf("\rTimer Title: %s\t\tTag: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n",
+    project_name, project_name, project_name, project_name, project_name)
 }
 
 @(private)
 show_report_by_tag :: proc(tag_name: string) {
-
+  fmt.printf("\rTimer Title: %s\t\tProject: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n", tag_name, tag_name, tag_name, tag_name, tag_name)
 }
+

@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:log"
 import "core:mem"
 import "core:os"
+import "core:thread"
 
 
 main :: proc() {
@@ -39,3 +40,16 @@ main :: proc() {
 
   fmt.println("Closing the app!")
 }
+
+/*
+TO-DO:
+  1. Implement left over functions.
+  2. Make it pretty!
+*/
+
+/*
+FILE DESIGN:
+1. Need to store timers' data
+2. Need to store projects
+3. Need to store tags
+*/
