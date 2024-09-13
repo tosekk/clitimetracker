@@ -1,6 +1,7 @@
 package clitimetracker
 
 import "core:fmt"
+import "core:log"
 import "core:os"
 import "core:strconv"
 import "core:time"
@@ -67,21 +68,28 @@ handle_arguments :: proc(curr_timer: ^Timer, args: []string) {
 
     if arg[0] == arg_identifier[0] {
       // Value that fol lows after the arguments
-      value: string = passed_arguments[arg_id + 1]
+      value: string
+      
+      if len(passed_arguments) > 1 {
+        value = passed_arguments[arg_id + 1]
+      }
 
       switch arg {
         case "--deadline", "-d":
           set_deadline(curr_timer, value)
         case "--preport", "-pr":
           show_report(value, true)
+          return
         case "--project", "-P":
           set_project(curr_timer, value)
         case "--report", "-r":
           show_report()
+          return
         case "--tag", "-t":
           set_tag(curr_timer, value)
         case "--treport", "-tr":
           show_report(value, false)
+          return
         case "--pause", "-p":
           curr_timer.end_time = time.now()
         case "--stop", "-s":
@@ -119,7 +127,7 @@ handle_arguments :: proc(curr_timer: ^Timer, args: []string) {
 
     if elapsed_time_string == deadline_time_string {
       fmt.printfln("\rTime has run out! You've reached the deadline!\t")
-      curr_timer.running = false
+      save_and_stop_timer(curr_timer)
       break
     }
   }
@@ -150,6 +158,7 @@ run_timer :: proc(timer: ^Timer, timer_time: ^time.Time) {
 save_and_stop_timer :: proc(timer: ^Timer) {
   timer.running = false
   timer.end_time = time.now()
+  write_timer(timer)
 }
 
 @(private)
@@ -184,31 +193,87 @@ show_report :: proc {
 show_overall_report :: proc() {
   // load_data(PATH) -> returns JSON with data
   // show data from the path
+  timers: []Timer = get_timers()
 
-  fmt.printf("\rTimer Title: \tProject Title: \tTag: \nStart Time: \tEnd Time: \tDuration: \n")
+  if len(timers) < 1 {
+    fmt.println("There are no timers recorded in user's history!")
+  }
+
+  for timer in timers {
+    start_time_string, end_time_string, duration_string := get_time_strings(timer)
+
+    fmt.printf("\rTimer Title: %s\tProject Title: %s\tTag: %s\nStart Time: %s\tEnd Time: %s\tDuration: %s\n", \\
+      timer.title, timer.project, timer.tag, start_time_string, end_time_string, duration_string)
+  }
 }
 
 @(private)
 show_report_by_project_or_tag :: proc(title: string, is_project: bool) {
   // load_data(PATH) -> returns JSON with data
   // pass read data to functions below.
+  timers: []Timer = get_timers()
 
-  if is_project {
-    show_report_by_project(title)
+  if len(timers) < 1 {
+    fmt.println("There are no timers recorded in user's history!")
     return
   }
 
-  show_report_by_tag(title)
+  if is_project {
+    show_report_by_project(timers, title)
+    return
+  }
+
+  show_report_by_tag(timers, title)
 }
 
 @(private)
-show_report_by_project :: proc(project_name: string) {
-  fmt.printf("\rTimer Title: %s\t\tTag: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n",
-    project_name, project_name, project_name, project_name, project_name)
+show_report_by_project :: proc(timers: []Timer, project_name: string) {
+  same_project_timers: [dynamic]Timer
+
+  for timer in timers {
+    if timer.project == project_name {
+      start_time_string, end_time_string, duration_string := get_time_strings(timer)
+
+      fmt.printf("\rTimer Title: %s\t\tTag: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n",
+        timer.title, timer.tag, start_time_string, end_time_string, duration_string)
+    
+      append(&same_project_timers, timer)
+    }
+  }
+  
+  if len(same_project_timers) < 1 {
+    fmt.printfln("\rCouldn't find timers for given \"%s\" project.\n", project_name)
+  }
 }
 
 @(private)
-show_report_by_tag :: proc(tag_name: string) {
-  fmt.printf("\rTimer Title: %s\t\tProject: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n", tag_name, tag_name, tag_name, tag_name, tag_name)
+show_report_by_tag :: proc(timers: []Timer, tag_name: string) {
+  same_tag_timers: [dynamic]Timer
+
+  for timer in timers {
+    if timer.tag == tag_name {
+      start_time_string, end_time_string, duration_string := get_time_strings(timer)
+      fmt.printf("\rTimer Title: %s\t\tProject: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n", \\
+        timer.title, timer.project, start_time_string, end_time_string, duration_string)
+      
+      append(&same_tag_timers, timer)
+    }
+  }
+
+  if len(same_tag_timers) < 1 {
+    fmt.printfln("\rCouldn't find timers with the given \"%s\" tag.\n", tag_name)
+  }
 }
 
+@(private)
+get_time_strings :: proc(timer: Timer) -> (start_time_string, end_time_string, duration_string: string) {
+  time_buf: [time.MIN_HMS_LEN]u8
+  
+  start_time_string = time.time_to_string_hms(timer.start_time, time_buf[:])
+  end_time_string = time.time_to_string_hms(timer.end_time, time_buf[:])
+      
+  duration: time.Duration = time.diff(timer.start_time, timer.end_time)
+  duration_string = time.duration_to_string_hms(duration, time_buf[:])
+
+  return
+}

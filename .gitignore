@@ -1,5 +1,9 @@
 clitimetracker
 
+# data
+data/
+data/*
+
 # logs
 logs/
 logs/*.log
