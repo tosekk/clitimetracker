@@ -200,9 +200,17 @@ show_overall_report :: proc() {
   }
 
   for timer in timers {
-    start_time_string, end_time_string, duration_string := get_time_strings(timer)
+    start_time_buf: [time.MIN_HMS_LEN]u8
+    end_time_buf: [time.MIN_HMS_LEN]u8
+    duration_buf: [time.MIN_HMS_LEN]u8
 
-    fmt.printf("\rTimer Title: %s\tProject Title: %s\tTag: %s\nStart Time: %s\tEnd Time: %s\tDuration: %s\n", \\
+    start_time_string := time.time_to_string_hms(timer.start_time, start_time_buf[:])
+    end_time_string := time.time_to_string_hms(timer.end_time, end_time_buf[:])
+      
+    duration: time.Duration = time.diff(timer.start_time, timer.end_time)
+    duration_string := time.duration_to_string_hms(duration, duration_buf[:])
+
+    fmt.printf("\rTimer Title: %s\tProject Title: %s\tTag: %s\nStart Time: %v\tEnd Time: %v\tDuration: %v\n",\\
       timer.title, timer.project, timer.tag, start_time_string, end_time_string, duration_string)
   }
 }
@@ -232,9 +240,17 @@ show_report_by_project :: proc(timers: []Timer, project_name: string) {
 
   for timer in timers {
     if timer.project == project_name {
-      start_time_string, end_time_string, duration_string := get_time_strings(timer)
+      start_time_buf: [time.MIN_HMS_LEN]u8
+      end_time_buf: [time.MIN_HMS_LEN]u8
+      duration_buf: [time.MIN_HMS_LEN]u8
 
-      fmt.printf("\rTimer Title: %s\t\tTag: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n",
+      start_time_string := time.time_to_string_hms(timer.start_time, start_time_buf[:])
+      end_time_string := time.time_to_string_hms(timer.end_time, end_time_buf[:])
+      
+      duration: time.Duration = time.diff(timer.start_time, timer.end_time)
+      duration_string := time.duration_to_string_hms(duration, duration_buf[:])
+
+      fmt.printf("\rTimer Title: %s\t\tTag: %s\n\rStart Time: %v\tEnd Time: %v\tDuration: %v\n",
         timer.title, timer.tag, start_time_string, end_time_string, duration_string)
     
       append(&same_project_timers, timer)
@@ -252,8 +268,17 @@ show_report_by_tag :: proc(timers: []Timer, tag_name: string) {
 
   for timer in timers {
     if timer.tag == tag_name {
-      start_time_string, end_time_string, duration_string := get_time_strings(timer)
-      fmt.printf("\rTimer Title: %s\t\tProject: %s\n\rStart Time: %s\tEnd Time: %s\tDuration: %s\n", \\
+      start_time_buf: [time.MIN_HMS_LEN]u8
+      end_time_buf: [time.MIN_HMS_LEN]u8
+      duration_buf: [time.MIN_HMS_LEN]u8
+
+      start_time_string := time.time_to_string_hms(timer.start_time, start_time_buf[:])
+      end_time_string := time.time_to_string_hms(timer.end_time, end_time_buf[:])
+      
+      duration: time.Duration = time.diff(timer.start_time, timer.end_time)
+      duration_string := time.duration_to_string_hms(duration, duration_buf[:])
+      
+      fmt.printf("\rTimer Title: %s\t\tProject: %s\n\rStart Time: %v\tEnd Time: %v\tDuration: %v\n", \\
         timer.title, timer.project, start_time_string, end_time_string, duration_string)
       
       append(&same_tag_timers, timer)
@@ -265,15 +290,3 @@ show_report_by_tag :: proc(timers: []Timer, tag_name: string) {
   }
 }
 
-@(private)
-get_time_strings :: proc(timer: Timer) -> (start_time_string, end_time_string, duration_string: string) {
-  time_buf: [time.MIN_HMS_LEN]u8
-  
-  start_time_string = time.time_to_string_hms(timer.start_time, time_buf[:])
-  end_time_string = time.time_to_string_hms(timer.end_time, time_buf[:])
-      
-  duration: time.Duration = time.diff(timer.start_time, timer.end_time)
-  duration_string = time.duration_to_string_hms(duration, time_buf[:])
-
-  return
-}
